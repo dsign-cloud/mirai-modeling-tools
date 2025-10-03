@@ -145,7 +145,7 @@ def setup_ref_image(image_path,location=(0,0,0),scale=(1,1,1),rotation=(math.pi/
 
 def check_arrow():
      if bpy.context.scene.ARROW.name not in bpy.data.objects:
-         bpy.context.scene.ARROW = setup_ref_image(r"C:\Users\alber\Downloads\arrow.png",rotation=(0,0,0))
+         bpy.context.scene.ARROW = setup_ref_image(r"..\rsc\ref\arrow.png",rotation=(0,0,0))
          
 def setup_ref_images(url):
     # Clear existing reference images in "References" collection
@@ -160,7 +160,7 @@ def setup_ref_images(url):
         ref_col.objects.link(img1)
         img1.hide_select = True
 
-    img2 = setup_ref_image(r"C:\Users\alber\Downloads\arrow.png",rotation=(0,0,0))
+    img2 = setup_ref_image(r"..\rsc\ref\arrow.png",rotation=(0,0,0))
     if img2:
         ref_col.objects.link(img2)
         img2.hide_select = True
@@ -650,7 +650,7 @@ class OBJECT_OT_setup_ref_images(bpy.types.Operator):
 
     def execute(self, context):
         
-        setup_ref_images(r"C:\Users\alber\Downloads\Image20251003133529.png")
+        setup_ref_images(r"..\rsc\ref\car.png")
     
         
 
