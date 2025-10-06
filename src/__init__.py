@@ -424,7 +424,9 @@ def export_obj(obj):
     obj.select_set(True)
 
     #Export selected objects
-    bpy.ops.export_scene.gltf(filepath=os.path.join(bpy.context.scene.pathToFile,obj.name + ".glb"),export_format='GLB',check_existing=True,use_selection =True)
+    bpy.ops.export_scene.gltf(filepath=os.path.join(bpy.context.scene.pathToFile,obj.name + ".glb"),export_format='GLB',check_existing=True,use_selection =True,
+                              export_image_format = "WEBP",
+                              export_image_quality= 85)
 
     #Delete plane and lights
     bpy.data.objects.remove(plane, do_unlink=True)
@@ -607,7 +609,9 @@ class OBJECT_OT_export_obj_glb(bpy.types.Operator):
         bpy.context.scene.targetObj.select_set(True)
 
         #Export selected objects
-        bpy.ops.export_scene.gltf(filepath=os.path.join(bpy.context.scene.pathToFile,bpy.context.scene.targetObj.name + ".glb"),export_format='GLB',check_existing=True,use_selection =True)
+        bpy.ops.export_scene.gltf(filepath=os.path.join(bpy.context.scene.pathToFile,bpy.context.scene.targetObj.name + ".glb"),export_format='GLB',check_existing=True,use_selection =True,
+                                export_image_format = "WEBP",
+                                export_image_quality= 85)
 
         #Delete plane and lights
         bpy.data.objects.remove(plane, do_unlink=True)
