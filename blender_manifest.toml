@@ -4,7 +4,7 @@ schema_version = "1.0.0"
 # Change the values according to your extension
 id = "mirai_exporter_extension"
 version = "1.0.0"
-name = "Mirai exporter extension"
+name = "Mirai exportter extension"
 tagline = "This is a helper to export models correctly"
 maintainer = "Amadeo DC"
 # Supported types: "add-on", "theme"

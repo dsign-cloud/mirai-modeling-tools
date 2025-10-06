@@ -1,0 +1,22 @@
+{
+  "version": "v1",
+  "blocklist": [],
+  "data": [
+    {
+      "schema_version": "1.0.0",
+      "id": "mirai_exporter_extension",
+      "name": "Mirai exporter extension",
+      "tagline": "This is a helper to export models correctly",
+      "version": "1.0.0",
+      "type": "add-on",
+      "maintainer": "Amadeo DC",
+      "license": [
+        "SPDX:GPL-3.0-or-later"
+      ],
+      "blender_version_min": "4.2.0",
+      "archive_url": "./v0.0.2.zip",
+      "archive_size": 2504701,
+      "archive_hash": "sha256:6bcc71975c63a8c8368ff097b97698f5201c2a068e332c09e488c8486417c4d5"
+    }
+  ]
+}

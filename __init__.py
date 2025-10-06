@@ -1,5 +1,29 @@
 """
 Blender operator + UI panel to bake a 128x128 shadow texture of the active object.
+
+Usage:
+- Open this script in Blender's text editor and run it (or install as an addon).
+- In the 3D View > Sidebar (N-panel) under the "Shadow Baker" panel, click "Bake Shadow Texture".
+
+What the operator does:
+1. Takes the active object (must be a mesh).
+2. Computes a bounding radius and creates a plane centered on the object's X/Y at the object's lowest world Z.
+   - The plane side length is twice the object's radius (so it fully covers the object footprint).
+3. Creates a new 128x128 RGBA image and assigns it to a material on the plane (so the plane has a texture to write to).
+4. Adds a top-down sun light oriented to cast shadows onto the plane. Places an orthographic camera above the plane.
+5. Makes the original object invisible to the camera but still cast shadows.
+6. Renders the scene at 128x128, then post-processes the rendered image: any nearly-white pixel is made fully transparent
+   (RGB set to black, A = 0). Black (shadow) areas remain black and opaque.
+7. Saves the final PNG next to the current .blend file (or in temp folder) as "baked_shadow.png".
+
+Notes & assumptions (safe defaults):
+- Uses Cycles as the render engine (shadow catcher workflows are simpler in Cycles).
+- If Cycles is unavailable, the script tries to switch automatically.
+- The script attempts to avoid changing the user's scene permanently: it stores and restores some settings where reasonable,
+  but it does create a plane, a light and a camera which remain in the scene after running (so you can inspect them).
+
+Compatibility: Blender 2.90+ (tested style against modern APIs). Some fields/names may vary between versions.
+
 """
 
 import bpy
@@ -10,60 +34,17 @@ import math
 import os
 
 
-bl_info = {
-    "name": "Mirai Modeling Tools",
-    "author": "Amadeo Delgado Casado",
-    "version": (0, 0, 1),
-    "blender": (4, 5, 0),          
-    "location": "View3D > Sidebar",
-    "description": "Tool for adding shadows and exproting glb"               
-}
-
-
 COLLECTIONS = ["Shadow", "Collider", "Asset"]
 
-
+ARROW = None
 
 MEASUREMENTS ={
-    "Low table":[0.4,0.5,"Scale_LowTable.png"],
-    "Table":[0.71,0.76,"Scale_Table.png"],
-    "High table":[1,1.07,"Scale_HighTable.png"],
-
-    "Chair":[0.45,0.5,"Scale_Chair.png"],
-    "High chair":[0.6,0.8,"Scale_HighChair.png"],
-    "Armchair":[0.8,0.9,"Scale_Armchair.png"],
-    "Sofa":[0.7,0.9,"Scale_Sofa.png"],
-
-    "Hanger":[1.5,1.8,"Scale_Hanger.png"],
-    
-    "Bicycle":[1,1.2,"Scale_Bicycle.png"],
-    "Car":[1.4,1.6,"Scaled_Car.png"],
-
-    "Door":[2,2.2,"Scale_Door.png"],
-    "Double Door":[2,2.2,"Scale_DoubleDoor.png"],
-
-    "Hanger":[1.5,1.8,"Scale_Hanger.png"],
-    
-    "Human (average)":[1.65,1.75,"Scale_People.png"],
-
+    "Table":[0.71,0.76,"table.png"],
+    "Chair":[0.45,0.5],
+    "Hanger":[1.5,1.8],
+    "High table":[1,1.07],
     "FREE (Only for exceptions)":[0,9999],
 }
-
-
-def measurements_update(self, context):
-    """Called when scene.measurements EnumProperty changes."""
-    try:
-        key = context.scene.measurements
-        # if FREE, don't set refs
-        if key == "FREE (Only for exceptions)":
-            return
-        # build path and call the existing function that makes the refs
-        url = get_path_to_image(MEASUREMENTS[key][2])
-        setup_ref_images(url)
-    except Exception as e:
-        # avoid hard crash during register / early context states
-        print("measurements_update skipped (early or error):", e)
-        return
 
 PROPS = [
     ('name', bpy.props.StringProperty(name='Name',default='MyAsset')),
@@ -75,20 +56,11 @@ PROPS = [
     ('Collection',bpy.props.PointerProperty(name='Collection',type=bpy.types.Collection)),
     ("targetObj", bpy.props.PointerProperty(name="Target Object", type=bpy.types.Object)),
     ("numLights", bpy.props.IntProperty(name="Number of Lights", default=4, min=1, max=16)),
-    # ('measurements', bpy.props.EnumProperty(name='Measurements',items=[(key,key,key) for key in MEASUREMENTS.keys()],default='Table'),)
-    ('measurements', bpy.props.EnumProperty(
-         name='Measurements',
-         items=[(key,key,key) for key in MEASUREMENTS.keys()],
-         default='Table',
-        #  update=measurements_update
-    ),)
-    
+    ('measurements', bpy.props.EnumProperty(name='Measurements',items=[(key,key,key) for key in MEASUREMENTS.keys()],default='Table'),),
+    ('ARROW', bpy.props.PointerProperty(name='Arrow', type=bpy.types.Object))
 ]
 
-
-
 # ---------- Utility functions ----------
-
 
 def fix_origin(obj):
     """Set the object's origin to the center of its bottom face and move the object to (0,0,0)."""
@@ -171,13 +143,10 @@ def setup_ref_image(image_path,location=(0,0,0),scale=(1,1,1),rotation=(math.pi/
 
     return image_plane
 
-def get_path_to_image(name):
-    #Get local path of file
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    #Add image that is in the same folder as this script
-    url_to_image = os.path.join(base_path,"ref", name)
-    return url_to_image
-
+def check_arrow():
+     if bpy.context.scene.ARROW.name not in bpy.data.objects:
+         bpy.context.scene.ARROW = setup_ref_image(r"..\rsc\ref\arrow.png",rotation=(0,0,0))
+         
 def setup_ref_images(url):
     # Clear existing reference images in "References" collection
     ref_col = make_collection("References")
@@ -191,15 +160,15 @@ def setup_ref_images(url):
         ref_col.objects.link(img1)
         img1.hide_select = True
 
-    url_to_arrow = get_path_to_image("Scale_DirectionArrow.png")
-    print("PATH: ",url_to_arrow)
-    img2 = setup_ref_image(url_to_arrow,rotation=(0,0,0))
+    img2 = setup_ref_image(r"..\rsc\ref\arrow.png",rotation=(0,0,0))
     if img2:
         ref_col.objects.link(img2)
         img2.hide_select = True
 
     return
-          
+       
+
+        
 def make_collection(name):
     if name in bpy.data.collections:
         #set collection unclickable
@@ -211,7 +180,7 @@ def make_collection(name):
         new_col = bpy.data.collections.new(name)
         bpy.context.scene.collection.children.link(new_col)
         #set collection unclickable
-        # new_col.hide_select = True
+        new_col.hide_select = True
         return new_col
 
 def world_bbox_corners(obj):
@@ -411,8 +380,6 @@ def isolate_mesh_render(obj):
 def export_obj(obj):
     #Begin
     #Make suns
-    fix_origin(obj)
-
     lights = create_x_suns_around(obj, distance=1.0)
 
     #Make shadow plane
@@ -589,13 +556,8 @@ class OBJECT_OT_export_obj_glb(bpy.types.Operator):
             self.report({'ERROR'}, "Target object is not a mesh")
             return {'CANCELLED'}
         
-        #
-        
         #Begin
         #Make suns
-
-        fix_origin(bpy.context.scene.targetObj)
-
         lights = create_x_suns_around(bpy.context.scene.targetObj, distance=1.0)
 
         #Make shadow plane
@@ -688,11 +650,7 @@ class OBJECT_OT_setup_ref_images(bpy.types.Operator):
 
     def execute(self, context):
         
-        if bpy.context.scene.measurements not in MEASUREMENTS or bpy.context.scene.measurements=="FREE (Only for exceptions)":
-            self.report({'ERROR'}, "Invalid measurement selected")
-            return {'CANCELLED'}
-        url_to_image = get_path_to_image(MEASUREMENTS[bpy.context.scene.measurements][2])
-        setup_ref_images(url_to_image)
+        setup_ref_images(r"..\rsc\ref\car.png")
     
         
 
@@ -700,7 +658,7 @@ class OBJECT_OT_setup_ref_images(bpy.types.Operator):
 
 
 class VIEW3D_PT_shadow_baker_panel(bpy.types.Panel):
-    bl_label = "Assets exporter"
+    bl_label = "Shadow Baker"
     bl_idname = "VIEW3D_PT_shadow_baker"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -710,9 +668,7 @@ class VIEW3D_PT_shadow_baker_panel(bpy.types.Panel):
         layout = self.layout
 
         make_collection("References")
-        
-
-
+        # check_arrow()
 
         resetPositionBox = layout.box()
         resetPositionBox.label(text="1º Setup", icon='WORLD_DATA')
@@ -730,10 +686,6 @@ class VIEW3D_PT_shadow_baker_panel(bpy.types.Panel):
         measurementBox.operator(OBJECT_OT_setup_ref_images.bl_idname, text="Setup reference images")
         row = col3.row(align=True)
         row.prop(context.scene, 'measurements')
-        #Call funtion on change of enum
-
-
-
         row = col3.row(align=True)
         row.label(text="Target height range: " + str(MEASUREMENTS[context.scene.measurements][0]) + "m - " + str(MEASUREMENTS[context.scene.measurements][1]) + "m")
         row = col3.row(align=True)
