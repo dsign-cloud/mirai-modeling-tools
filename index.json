@@ -3,7 +3,7 @@
   "blocklist": [],
   "data": [
     {
-      "schema_version": "1.0.1",
+      "schema_version": "1.0.0",
       "id": "mirai_exporter_extension",
       "name": "Mirai exportter extension",
       "tagline": "This is a helper to export models correctly",

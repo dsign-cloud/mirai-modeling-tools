@@ -14,9 +14,9 @@
         "SPDX:GPL-3.0-or-later"
       ],
       "blender_version_min": "4.2.0",
-      "archive_url": "./v0.0.2.zip",
-      "archive_size": 2504703,
-      "archive_hash": "sha256:2466af4338d18c26c5cc4e7c8b9018b018b0b67923839c85df7dd5fecad547e7"
+      "archive_url": "./mirai_exporter_extension-1.0.1.zip",
+      "archive_size": 2520425,
+      "archive_hash": "sha256:9854730ad59bf7346a04edfe516c9329879567d2f9b58ae1d5b16f3ac62ae7c9"
     }
   ]
 }
