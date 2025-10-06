@@ -14,7 +14,7 @@
         "SPDX:GPL-3.0-or-later"
       ],
       "blender_version_min": "4.2.0",
-      "archive_url": "./v0.0.2.zip",
+      "archive_url": "./v0.0.3.zip",
       "archive_size": 2504703,
       "archive_hash": "sha256:23eb0a2fc91c89977a53b627f4227dce39356612f8e7892de271079b72e38fb1"
     }
